@@ -26,6 +26,10 @@
         padding: 20px;
       }
 
+      #btnContinuar:hover {
+        background-color: #2980b9;
+      }
+
       .container {
         background: white;
         border-radius: 15px;
@@ -134,6 +138,7 @@
     </style>
   </head>
   <body>
+    <audio id="beep-sound" src="beep.mp3" preload="auto"></audio>
     <div class="container">
       <h1>Validación de Acceso</h1>
       <p>Escanee su código QR para verificación</p>
@@ -142,9 +147,29 @@
       <div id="resultado">
         <p>Esperando escaneo...</p>
       </div>
+      <button
+        id="btnContinuar"
+        style="
+          display: none;
+          margin-top: 20px;
+          padding: 12px 20px;
+          background-color: #3498db;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transition: background-color 0.3s ease;
+        "
+      >
+        Escanear siguiente
+      </button>
     </div>
 
     <script>
+      let foliosEscaneados = {};
+
       document.addEventListener("DOMContentLoaded", async function () {
         const resultado = document.getElementById("resultado");
         let baseDeDatos = [];
@@ -183,11 +208,38 @@
         }
 
         // Configurar escáner QR
-        const qrScanner = new Html5QrcodeScanner(
-          "reader",
-          { fps: 10, qrbox: 250 },
-          false
-        );
+        const html5QrCode = new Html5Qrcode("reader");
+        const btnContinuar = document.getElementById("btnContinuar");
+
+        function iniciarEscaneo() {
+          html5QrCode
+            .start(
+              { facingMode: "environment" },
+              { fps: 10, qrbox: 250 },
+              (decodedText) => {
+                html5QrCode.stop().then(() => {
+                  btnContinuar.style.display = "block"; // Mostrar botón
+                  onScanSuccess(decodedText); // Procesar QR
+                });
+              },
+              (error) => {
+                // Opcional: puedes ignorar los errores frecuentes de escaneo
+              }
+            )
+            .catch((err) => {
+              resultado.innerHTML = `<div class="access-denied"><h3>❌ Error al iniciar escáner</h3><p>${err}</p></div>`;
+            });
+        }
+
+        // Escaneo inicial
+        iniciarEscaneo();
+
+        // Evento del botón para permitir escanear otra vez
+        btnContinuar.addEventListener("click", () => {
+          btnContinuar.style.display = "none";
+          resultado.innerHTML = `<p>Esperando escaneo...</p>`;
+          iniciarEscaneo();
+        });
 
         // Función de validación dual mejorada
         function validarAcceso(qrData) {
@@ -204,6 +256,10 @@
 
             const folioQR = folioMatch[1].trim();
             const nombreQR = nombreMatch[1].trim().toLowerCase();
+            if (foliosEscaneados[folioQR]) {
+              const horaUso = foliosEscaneados[folioQR];
+              throw new Error(`Este QR ya ha sido utilizado a las ${horaUso}`);
+            }
 
             const registroValido = baseDeDatos.find((persona) => {
               return persona.Folio === folioQR && persona.Nombre === nombreQR;
@@ -306,6 +362,8 @@
         `;
 
           if (validacion.success) {
+            document.getElementById("beep-sound").play();
+
             htmlContent += `
             <div style="margin-top:15px; background:#e8f5e9; padding:10px; border-radius:5px;">
               <p><strong>Bienvenido:</strong> ${validacion.data.Nombre}</p>
@@ -313,6 +371,10 @@
             </div>
           `;
             resultado.className = "access-granted";
+            const ahora = new Date().toLocaleTimeString("es-MX", {
+              hour12: false,
+            });
+            foliosEscaneados[validacion.data.Folio] = ahora;
           } else {
             resultado.className = "access-denied";
           }
