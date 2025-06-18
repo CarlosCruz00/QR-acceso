@@ -5,15 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Acceso con QR</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
-    #resultado { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      text-align: center;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 1.8rem;
+    }
+    
+    .description {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+      font-weight: 300;
+    }
+    
+    #reader {
+      width: 100%;
+      margin: 0 auto;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    #resultado {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: #f8f9fa;
+      color: #2c3e50;
+      font-size: 1.1rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    #resultado.success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    #resultado.error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .scan-icon {
+      font-size: 3rem;
+      color: #3498db;
+      margin-bottom: 15px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    .footer {
+      margin-top: 30px;
+      color: #95a5a6;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+        margin: 10px;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      #reader {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Escanea tu código QR</h1>
-  <div id="reader" style="width: 300px;"></div>
-  <div id="resultado"></div>
+  <div class="container">
+    <div class="scan-icon">📷</div>
+    <h1>Escanea tu código QR</h1>
+    <p class="description">Apunta con la cámara hacia el código QR para identificarte</p>
+    
+    <div id="reader"></div>
+    <div id="resultado">Esperando escaneo...</div>
+    
+    <p class="footer">Sistema de acceso seguro - v1.0</p>
+  </div>
 
-  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const resultado = document.getElementById('resultado');
+      
+      function onScanSuccess(decodedText, decodedResult) {
+        resultado.innerHTML = `Código escaneado: <strong>${decodedText}</strong>`;
+        resultado.classList.add('success');
+        resultado.classList.remove('error');
+        
+        // Aquí puedes agregar lógica para procesar el código escaneado
+        console.log(`Código escaneado: ${decodedText}`, decodedResult);
+      }
+      
+      function onScanFailure(error) {
+        resultado.innerHTML = `Error al escanear: ${error}`;
+        resultado.classList.add('error');
+        resultado.classList.remove('success');
+        console.warn(`Error al escanear: ${error}`);
+      }
+      
+      const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { 
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        },
+        /* verbose= */ false
+      );
+      
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+      
+      // Ajustar el tamaño del lector en dispositivos móviles
+      function adjustScannerSize() {
+        const reader = document.getElementById('reader');
+        const width = Math.min(window.innerWidth - 40, 500);
+        const qrboxSize = Math.min(width - 50, 300);
+        
+        html5QrcodeScanner._qrbox = { width: qrboxSize, height: qrboxSize };
+      }
+      
+      window.addEventListener('resize', adjustScannerSize);
+      adjustScannerSize();
+    });
+  </script>
 </body>
 </html>
